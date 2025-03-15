@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { styled } from '@mui/material/styles'
 import getClassPrefixer from '../Lib/getClassPrefixer'
 import { indigo, yellow, grey } from '@mui/material/colors'
@@ -37,10 +38,16 @@ const Container = styled('div')({
     position: 'absolute',
     width: 200,
     zIndex: 100,
+  },
+  [`& .${classes.movements}`]: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+    padding: '1rem 1.4rem',
   }
 })
 
-const Card = ({ backgroundColor, name, healthPoints, imgUrl, bgImgUrl }) => {
+const Card = ({ backgroundColor, name, healthPoints, imgUrl, bgImgUrl, movements }) => {
   return (
     <Container
       style={{
@@ -76,6 +83,19 @@ const Card = ({ backgroundColor, name, healthPoints, imgUrl, bgImgUrl }) => {
             />
           </div>
         </Stack>
+        <div className={classes.movements}>
+          <T fontWeight='bold'>Movements</T>
+          {movements.map(movement => (
+            // eslint-disable-next-line react/jsx-key
+            <Stack
+              direction='row'
+              justifyContent='space-between'
+            >
+              <T>{movement?.name}</T>
+              <T>{`PP: ${movement?.pp}`}</T>
+            </Stack>
+          ))}
+        </div>
       </div>
     </Container>
   )
@@ -84,13 +104,15 @@ const Card = ({ backgroundColor, name, healthPoints, imgUrl, bgImgUrl }) => {
 const Wrapper = () => {
   const [bgImgUrl, setBgImgUrl] = useState('')
   const backgroundColor = indigo[400]
+  const movement1 = { name: 'Mega Punch', pp: 20 }
+  const movement2 = { name: 'Fire Punch', pp: 15 }
+  const movement3 = { name: 'Pay Day', pp: 10 }
   const imgUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/150.png'
   
   const requestBgImgUrl = async () => {
     const backgroundImgUrl = await fetch(`${randomImgUrl}/${widthRequestImg}/${heightRequestImg}/?blur=2`)
     .then(response => response.url)
     setBgImgUrl(backgroundImgUrl)
-    console.log(bgImgUrl, '<<<<<<<<')
   }
 
   useEffect(() => {
@@ -102,6 +124,7 @@ const Wrapper = () => {
       imgUrl={imgUrl}
       bgImgUrl={bgImgUrl}
       backgroundColor={backgroundColor} 
+      movements={[movement1, movement2, movement3]}
     />
   )
 }

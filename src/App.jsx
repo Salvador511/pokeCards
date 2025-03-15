@@ -1,6 +1,6 @@
-import Card from "./Card"
+import List from "./List"
 const App = () => {
-  return <Card />
+  return <List />
 }
 
 export default App
