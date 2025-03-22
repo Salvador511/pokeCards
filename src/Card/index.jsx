@@ -1,15 +1,22 @@
 /* eslint-disable react/prop-types */
 import { styled } from '@mui/material/styles'
 import getClassPrefixer from '../Lib/getClassPrefixer'
-import { indigo, yellow, grey } from '@mui/material/colors'
-import { Stack, Typography as T } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { yellow, grey } from '@mui/material/colors'
+import { IconButton, Stack, Typography as T } from '@mui/material'
+import RefreshIcon from '@mui/icons-material/Refresh';
+import { useMemo } from 'react'
+import stringToColor from '../Utils/stringToColor'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import Loading from '../Loading'
+
 
 const displayName = 'Card'
 const classes = getClassPrefixer(displayName)
 const widthRequestImg = '320'
 const heightRequestImg = '200'
 const randomImgUrl = 'https://picsum.photos'
+
 const Container = styled('div')({
   width: '350px',
   height: '500px',
@@ -39,7 +46,11 @@ const Container = styled('div')({
     width: 200,
     zIndex: 100,
   },
-  [`& .${classes.movements}`]: {
+  [`& .${classes.refetchImage}`]: {
+    right: 0,
+    position: 'absolute'
+  },
+  [`& .${classes.stats}`]: {
     display: 'flex',
     flexDirection: 'column',
     gap: '1rem',
@@ -47,7 +58,11 @@ const Container = styled('div')({
   }
 })
 
-const Card = ({ backgroundColor, name, healthPoints, imgUrl, bgImgUrl, movements }) => {
+const Card = ({ backgroundColor, name, healthPoints, imgUrl, bgImgUrl, stats, invalidateImage }) => {
+  const currentStats = useMemo(() => stats.slice(1).map(stat => ({
+    value: stat?.base_stat,
+    label: stat?.stat?.name 
+  })))
   return (
     <Container
       style={{
@@ -81,50 +96,67 @@ const Card = ({ backgroundColor, name, healthPoints, imgUrl, bgImgUrl, movements
               src={imgUrl}
               className={classes.pokeimage}
             />
+            <IconButton 
+              className={classes.refetchImage}
+              onClick={() => invalidateImage()}
+              >
+              <RefreshIcon />
+            </IconButton>
           </div>
         </Stack>
-        <div className={classes.movements}>
-          <T fontWeight='bold'>Movements</T>
-          {movements.map(movement => (
-            // eslint-disable-next-line react/jsx-key
+        <div className={classes.stats}>
+          <T fontWeight='bold'>Stats:</T>
+          {currentStats.map((stat, index) => (
             <Stack
+              key={index}
               direction='row'
               justifyContent='space-between'
             >
-              <T>{movement?.name}</T>
-              <T>{`PP: ${movement?.pp}`}</T>
+              <T>{stat?.label}</T>
+              <T>{stat?.value}</T>
             </Stack>
           ))}
         </div>
-      </div>
+      </div> 
     </Container>
   )
 }
 
-const Wrapper = () => {
-  const [bgImgUrl, setBgImgUrl] = useState('')
-  const backgroundColor = indigo[400]
-  const movement1 = { name: 'Mega Punch', pp: 20 }
-  const movement2 = { name: 'Fire Punch', pp: 15 }
-  const movement3 = { name: 'Pay Day', pp: 10 }
-  const imgUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/150.png'
-  
+const Wrapper = ({ pokemon }) => {
+  const queryClient = useQueryClient()
+  const backgroundColor = stringToColor(pokemon?.name)
+
+  const [isLoading, setIsLoading] = useState(false)
+
   const requestBgImgUrl = async () => {
+    setIsLoading(true)
     const backgroundImgUrl = await fetch(`${randomImgUrl}/${widthRequestImg}/${heightRequestImg}/?blur=2`)
     .then(response => response.url)
-    setBgImgUrl(backgroundImgUrl)
+    setIsLoading(false)
+    return backgroundImgUrl
   }
 
-  useEffect(() => {
-    requestBgImgUrl()
-  }, [])
+  const { data : bgImgUrl } = useQuery({ 
+    queryKey: [`image-${pokemon.name}`], queryFn: requestBgImgUrl,
+    staleTime: Infinity
+  })
+
+  const invalidateImage = () => {
+    queryClient.invalidateQueries({ 
+      queryKey: [`image-${pokemon.name}`] 
+    })
+  }
 
   return (
+    isLoading ? <Loading /> :
     <Card
-      imgUrl={imgUrl}
+      imgUrl={pokemon?.sprites?.other['official-artwork'].front_default}
       bgImgUrl={bgImgUrl}
+      name={pokemon?.name}
       backgroundColor={backgroundColor} 
-      movements={[movement1, movement2, movement3]}
+      stats={pokemon?.stats}
+      healthPoints={pokemon?.stats[0]?.base_stat}
+      invalidateImage={invalidateImage}
     />
   )
 }
