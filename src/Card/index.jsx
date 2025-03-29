@@ -3,12 +3,14 @@ import { styled } from '@mui/material/styles'
 import getClassPrefixer from '../Lib/getClassPrefixer'
 import { yellow, grey } from '@mui/material/colors'
 import { IconButton, Stack, Typography as T } from '@mui/material'
-import RefreshIcon from '@mui/icons-material/Refresh';
+import RefreshIcon from '@mui/icons-material/Refresh'
+import StarIcon from '@mui/icons-material/Star'
 import { useMemo } from 'react'
 import stringToColor from '../Utils/stringToColor'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import Loading from '../Loading'
+import { useStore } from '../Store/store';
 
 
 const displayName = 'Card'
@@ -50,6 +52,10 @@ const Container = styled('div')({
     right: 0,
     position: 'absolute'
   },
+  [`& .${classes.favorite}`]: {
+    right: 30,
+    position: 'absolute'
+  },
   [`& .${classes.stats}`]: {
     display: 'flex',
     flexDirection: 'column',
@@ -58,7 +64,7 @@ const Container = styled('div')({
   }
 })
 
-const Card = ({ backgroundColor, name, healthPoints, imgUrl, bgImgUrl, stats, invalidateImage }) => {
+export const CardComponent = ({ backgroundColor, name, healthPoints, imgUrl, bgImgUrl, stats, invalidateImage, handleFavorite, favs }) => {
   const currentStats = useMemo(() => stats.slice(1).map(stat => ({
     value: stat?.base_stat,
     label: stat?.stat?.name 
@@ -96,12 +102,23 @@ const Card = ({ backgroundColor, name, healthPoints, imgUrl, bgImgUrl, stats, in
               src={imgUrl}
               className={classes.pokeimage}
             />
-            <IconButton 
-              className={classes.refetchImage}
-              onClick={() => invalidateImage()}
-              >
-              <RefreshIcon />
-            </IconButton>
+            {favs ?? 
+              <>
+                <IconButton 
+                  className={classes.refetchImage}
+                  onClick={() => invalidateImage()}
+                  >
+                  <RefreshIcon />
+                </IconButton>
+                <IconButton 
+                  className={classes.favorite}
+                  onClick={() => handleFavorite()}
+                  >
+                  <StarIcon />
+                </IconButton>
+              </> 
+            }
+            
           </div>
         </Stack>
         <div className={classes.stats}>
@@ -122,11 +139,12 @@ const Card = ({ backgroundColor, name, healthPoints, imgUrl, bgImgUrl, stats, in
   )
 }
 
-const Wrapper = ({ pokemon }) => {
+const Wrapper = ({ pokemon, ...props }) => {
   const queryClient = useQueryClient()
   const backgroundColor = stringToColor(pokemon?.name)
-
+  const setFavorite = useStore(state => state.setFavotite)
   const [isLoading, setIsLoading] = useState(false)
+
 
   const requestBgImgUrl = async () => {
     setIsLoading(true)
@@ -147,16 +165,26 @@ const Wrapper = ({ pokemon }) => {
     })
   }
 
+  const pokemonData = {
+    imgUrl: pokemon?.sprites?.other['official-artwork']?.front_default,
+    bgImgUrl,
+    name: pokemon?.name,
+    backgroundColor,
+    stats: pokemon?.stats,
+    healthPoints: pokemon?.stats[0]?.base_stat,
+    sprite: pokemon.sprites.front_default
+  }
+
+  const handleFavorite = () => setFavorite(pokemonData)
+
+
   return (
     isLoading ? <Loading /> :
-    <Card
-      imgUrl={pokemon?.sprites?.other['official-artwork'].front_default}
-      bgImgUrl={bgImgUrl}
-      name={pokemon?.name}
-      backgroundColor={backgroundColor} 
-      stats={pokemon?.stats}
-      healthPoints={pokemon?.stats[0]?.base_stat}
+    <CardComponent
+      {...pokemonData}
+      {...props}
       invalidateImage={invalidateImage}
+      handleFavorite={handleFavorite}
     />
   )
 }
